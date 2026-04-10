@@ -1,0 +1,13 @@
+{
+  "name": "siu-diabetes-prototype",
+  "version": "1.0.0",
+  "description": "Prototipo de asistencia glucemica por voz para conduccion",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

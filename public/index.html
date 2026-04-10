@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Asistencia glucémica</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Asistencia glucémica en conducción</h1>
+
+    <section class="card">
+      <p class="label">Glucosa actual</p>
+      <p id="glucoseValue" class="glucose-value">110 mg/dL</p>
+      <p id="trend" class="trend">Estable</p>
+      <p id="status" class="status safe">Estado seguro</p>
+    </section>
+
+    <section class="card">
+        <p class="label">Contexto</p>
+        <p id="drivingStatus" class="status warning">Sin movimiento</p>
+        <p id="motionValue" class="trend">Movimiento: 0.00</p>
+    </section>
+
+    <section class="card">
+      <p class="label">Último comando</p>
+      <p id="lastCommand">Ninguno</p>
+    </section>
+
+    <section class="card">
+      <p class="label">Respuesta del sistema</p>
+      <p id="systemMessage">Pulsa “Iniciar escucha” para comenzar.</p>
+    </section>
+
+    <section class="card">
+      <p class="label">Comandos disponibles</p>
+      <ul>
+        <li>¿Cuánto tengo de azúcar?</li>
+        <li>Consulta glucosa</li>
+        <li>Estado</li>
+        <li>Ayuda</li>
+        <li>Repite</li>
+        <li>Escenario estable</li>
+        <li>Escenario bajando</li>
+        <li>Escenario bajo</li>
+        <li>Escenario alto</li>
+      </ul>
+    </section>
+
+    <button id="listenButton">Iniciar escucha</button>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

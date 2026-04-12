@@ -6,40 +6,59 @@
   <title>Modo móvil - Asistencia glucémica</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
-  <main class="container">
-    <h1>Modo móvil</h1>
+<body class="mobile-body">
+  <main class="mobile-app">
+    <header class="mobile-header">
+      <div>
+        <p class="eyebrow">Asistente glucémico</p>
+        <h1>Modo móvil</h1>
+      </div>
+      <div class="screen-pill" id="screenName">Principal</div>
+    </header>
 
-    <section class="card">
-      <p class="label">Pantalla actual</p>
-      <p id="screenName">Principal</p>
+    <section class="hero-card">
+      <div class="hero-top">
+        <p class="label">Glucosa actual</p>
+        <span id="status" class="status safe">Estado seguro</span>
+      </div>
+      <p id="glucoseValue" class="hero-glucose">110 mg/dL</p>
+      <p id="trend" class="hero-trend">Estable</p>
+      <div class="hero-footer">
+        <div>
+          <p class="label">Contexto</p>
+          <p id="drivingStatus" class="context-value">Sin movimiento</p>
+        </div>
+        <div>
+          <p class="label">Movimiento</p>
+          <p id="motionValue" class="context-value">0.00</p>
+        </div>
+      </div>
     </section>
 
-    <section class="card">
-      <p class="label">Glucosa actual</p>
-      <p id="glucoseValue" class="glucose-value">110 mg/dL</p>
-      <p id="trend" class="trend">Estable</p>
-      <p id="status" class="status safe">Estado seguro</p>
+    <section id="feedbackBanner" class="feedback-banner feedback-neutral">
+      <p id="feedbackTitle" class="feedback-title">Sistema listo</p>
+      <p id="feedbackText" class="feedback-text">Esperando interacción por voz o gestos.</p>
     </section>
 
-    <section class="card">
-      <p class="label">Contexto</p>
-      <p id="drivingStatus" class="status warning">Sin movimiento</p>
-      <p id="motionValue" class="trend">Movimiento: 0.00</p>
+    <section class="info-grid">
+      <article class="glass-card">
+        <p class="label">Último comando</p>
+        <p id="lastCommand" class="card-value">Ninguno</p>
+      </article>
+
+      <article class="glass-card">
+        <p class="label">Respuesta del sistema</p>
+        <p id="systemMessage" class="card-value">
+          Pulsa “Iniciar escucha” para comenzar.
+        </p>
+      </article>
     </section>
 
-    <section class="card">
-      <p class="label">Último comando</p>
-      <p id="lastCommand">Ninguno</p>
-    </section>
-
-    <section class="card">
-      <p class="label">Respuesta del sistema</p>
-      <p id="systemMessage">Pulsa “Iniciar escucha” para comenzar.</p>
-    </section>
-
-    <section class="card">
-      <p class="label">Navegación</p>
+    <section class="glass-card">
+      <div class="section-title-row">
+        <h2>Navegación</h2>
+        <span class="mini-tag">Voz / gesto</span>
+      </div>
       <div class="button-grid">
         <button class="small-button" id="mainScreenButton">Principal</button>
         <button class="small-button" id="trendScreenButton">Tendencia</button>
@@ -48,8 +67,11 @@
       </div>
     </section>
 
-    <section class="card">
-      <p class="label">Escenarios</p>
+    <section class="glass-card">
+      <div class="section-title-row">
+        <h2>Escenarios</h2>
+        <span class="mini-tag">Simulación</span>
+      </div>
       <div class="button-grid">
         <button class="small-button" id="stableScenarioButton">Estable</button>
         <button class="small-button" id="downScenarioButton">Bajando</button>
@@ -59,9 +81,56 @@
       </div>
     </section>
 
-    <button id="listenButton">Iniciar escucha</button>
+  <section class="glass-card">
+    <div class="section-title-row">
+      <h2>Gestos</h2>
+      <span class="mini-tag">Cámara</span>
+    </div>
+
+    <div class="gesture-box">
+        <video id="gestureVideo" autoplay playsinline muted></video>
+        <div class="gesture-overlay">
+          <p class="gesture-status-label">Gesto detectado</p>
+          <p id="gestureStatus" class="gesture-status-value">Ninguno</p>
+        </div>
+      </div>
+
+      <div class="button-grid">
+        <button class="small-button" id="startGestureButton">Activar cámara</button>
+        <button class="small-button" id="stopGestureButton">Desactivar cámara</button>
+      </div>
+
+      <div class="button-grid gesture-test-grid">
+        <button class="small-button" id="gestureNextButton">Simular siguiente</button>
+        <button class="small-button" id="gesturePrevButton">Simular anterior</button>
+        <button class="small-button" id="gestureConfirmButton">Simular confirmar</button>
+        <button class="small-button" id="gestureCancelButton">Simular cancelar</button>
+      </div>
+    </section>    
+
+    <section class="glass-card">
+      <div class="section-title-row">
+        <h2>Interacción</h2>
+        <span class="mini-tag">Comandos</span>
+      </div>
+      <ul class="command-list">
+        <li>“Consulta glucosa”</li>
+        <li>“Ver tendencia”</li>
+        <li>“Pantalla principal”</li>
+        <li>“Escenario bajando”</li>
+        <li>“Escenario alto”</li>
+        <li>“Emergencia”</li>
+      </ul>
+    </section>
+
+    <div class="action-bar">
+      <button id="listenButton" class="primary-action">Iniciar escucha</button>
+      <button id="emergencyButton" class="danger-action">Emergencia</button>
+    </div>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="mobile.js"></script>
 </body>

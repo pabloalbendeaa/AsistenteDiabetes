@@ -28,36 +28,35 @@ const screenLabels = {
 };
 
 function updateDesktopUI(state) {
-
-  // 🔹 Cambiar pantalla
   Object.values(screens).forEach((screen) => {
-    if (screen) screen.classList.remove('active');
+    if (screen) {
+      screen.classList.remove('active');
+    }
   });
 
   const activeScreen = screens[state.screen] || screens.main;
-  if (activeScreen) activeScreen.classList.add('active');
+  if (activeScreen) {
+    activeScreen.classList.add('active');
+  }
 
-  // 🔹 Actualizar datos
   desktopScreenLabel.textContent = `Pantalla: ${screenLabels[state.screen] || 'Principal'}`;
   desktopGlucoseValue.textContent = `${state.glucose} mg/dL`;
   desktopTrend.textContent = state.trend;
   desktopStatus.textContent = state.status;
   desktopStatus.className = `status ${state.statusClass}`;
 
-  desktopMessage.textContent = state.message;
-  desktopLastCommand.textContent = state.lastCommand;
+  desktopMessage.textContent = state.message || 'Sistema iniciado.';
+  desktopLastCommand.textContent = state.lastCommand || 'Ninguno';
 
   desktopDrivingStatus.textContent = state.driving
     ? 'Conducción detectada'
     : 'Sin movimiento';
 
-  desktopMotionValue.textContent = `Movimiento: ${Number(state.motionValue || 0).toFixed(2)}`;
+  desktopMotionValue.textContent = Number(state.motionValue || 0).toFixed(2);
 
-  // 🔹 Tendencia
   trendExplanation.textContent =
-    `Glucosa: ${state.glucose} mg/dL. Tendencia: ${state.trend}.`;
+    `Glucosa: ${state.glucose} mg/dL. Tendencia: ${state.trend}. Estado: ${state.status}.`;
 
-  // 🔹 Emergencia visual
   if (state.emergency) {
     document.body.classList.add('emergency-mode');
     emergencyMessage.textContent = state.message;
@@ -66,7 +65,6 @@ function updateDesktopUI(state) {
   }
 }
 
-// 🔌 Socket
 socket.on('state:update', (state) => {
   updateDesktopUI(state);
 });

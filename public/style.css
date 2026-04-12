@@ -1,0 +1,225 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f6f8;
+  color: #1f2937;
+}
+
+.container {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+h1 {
+  font-size: 1.6rem;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.card {
+  background: white;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.label {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+.glucose-value {
+  font-size: 2rem;
+  font-weight: bold;
+  margin: 0;
+}
+
+.trend,
+.status,
+#lastCommand,
+#systemMessage {
+  margin-top: 6px;
+}
+
+.safe {
+  color: #15803d;
+}
+
+.warning {
+  color: #b45309;
+}
+
+.danger {
+  color: #b91c1c;
+}
+
+button {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  background: #2563eb;
+  color: white;
+  font-size: 1rem;
+  margin-top: 10px;
+}
+
+ul {
+  padding-left: 18px;
+}
+
+.home-container {
+  padding-top: 60px;
+}
+
+.nav-button {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  padding: 14px;
+  border-radius: 12px;
+  background: #2563eb;
+  color: white;
+  text-decoration: none;
+  font-size: 1rem;
+  margin-top: 12px;
+}
+
+.nav-button.secondary {
+  background: #475569;
+}
+
+.button-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.small-button {
+  width: 100%;
+  margin-top: 0;
+  padding: 10px;
+  font-size: 0.95rem;
+}
+
+.desktop-body {
+  background: #111827;
+  color: #f9fafb;
+  font-family: Arial, sans-serif;
+}
+
+.desktop-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.desktop-header {
+  margin-bottom: 24px;
+}
+
+.desktop-header h1 {
+  text-align: left;
+  margin-bottom: 8px;
+}
+
+.desktop-panel {
+  background: #1f2937;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 18px;
+}
+
+.desktop-main-panel {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.desktop-glucose {
+  font-size: 3rem;
+  font-weight: bold;
+  margin: 0;
+}
+
+.desktop-trend {
+  font-size: 1.8rem;
+  margin: 0;
+}
+
+.fake-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  height: 180px;
+  margin: 20px 0;
+}
+
+.chart-bar {
+  flex: 1;
+  background: #3b82f6;
+  border-radius: 8px 8px 0 0;
+}
+
+.chart-bar.small {
+  height: 50px;
+}
+
+.chart-bar.medium {
+  height: 110px;
+}
+
+.chart-bar.large {
+  height: 160px;
+}
+
+.emergency-panel {
+  border: 2px solid #ef4444;
+  background: #7f1d1d;
+}
+
+.hidden {
+  display: none;
+}
+
+.emergency-mode {
+  background: #7f1d1d;
+}
+
+.screen {
+  display: none;
+}
+
+.screen.active {
+  display: block;
+}
+
+.fake-chart.big {
+  height: 300px;
+}
+
+.alert-low {
+  background: #7f1d1d;
+  color: white;
+  padding: 20px;
+  border-radius: 12px;
+}
+
+.alert-high {
+  background: #92400e;
+  color: white;
+  padding: 20px;
+  border-radius: 12px;
+}
+
+.emergency {
+  background: red;
+  color: white;
+  padding: 30px;
+  font-size: 1.5rem;
+  border-radius: 12px;
+}

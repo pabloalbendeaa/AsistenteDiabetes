@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Modo escritorio - Asistencia glucémica</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="desktop-body">
+  <main class="desktop-container">
+
+  <!-- PRINCIPAL -->
+  <section id="screen-main" class="screen active">
+    <h2>Pantalla principal</h2>
+
+    <div class="desktop-main-panel">
+      <div>
+        <p class="label">Glucosa</p>
+        <p id="desktopGlucoseValue" class="desktop-glucose">110 mg/dL</p>
+      </div>
+
+      <div>
+        <p class="label">Tendencia</p>
+        <p id="desktopTrend">Estable</p>
+      </div>
+
+      <div>
+        <p class="label">Estado</p>
+        <p id="desktopStatus" class="status safe">Seguro</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- TENDENCIA -->
+  <section id="screen-trend" class="screen">
+    <h2>Tendencia ampliada</h2>
+
+    <div class="fake-chart big">
+      <div class="chart-bar small"></div>
+      <div class="chart-bar medium"></div>
+      <div class="chart-bar large"></div>
+      <div class="chart-bar medium"></div>
+      <div class="chart-bar small"></div>
+    </div>
+
+    <p id="trendExplanation"></p>
+  </section>
+
+  <!-- ALERTA BAJA -->
+  <section id="screen-low" class="screen alert-low">
+    <h2>⚠ Glucosa baja</h2>
+    <p>Se recomienda ingerir glucosa inmediatamente.</p>
+  </section>
+
+  <!-- ALERTA ALTA -->
+  <section id="screen-high" class="screen alert-high">
+    <h2>⚠ Glucosa alta</h2>
+    <p>Se recomienda control y seguimiento.</p>
+  </section>
+
+  <!-- EMERGENCIA -->
+  <section id="screen-emergency" class="screen emergency">
+    <h2>🚨 EMERGENCIA</h2>
+    <p id="emergencyMessage"></p>
+    <p>Simulando llamada al 112...</p>
+  </section>
+
+</main>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="desktop.js"></script>
+</body>
+</html>

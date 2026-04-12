@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Modo móvil - Asistencia glucémica</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Modo móvil</h1>
+
+    <section class="card">
+      <p class="label">Pantalla actual</p>
+      <p id="screenName">Principal</p>
+    </section>
+
+    <section class="card">
+      <p class="label">Glucosa actual</p>
+      <p id="glucoseValue" class="glucose-value">110 mg/dL</p>
+      <p id="trend" class="trend">Estable</p>
+      <p id="status" class="status safe">Estado seguro</p>
+    </section>
+
+    <section class="card">
+      <p class="label">Contexto</p>
+      <p id="drivingStatus" class="status warning">Sin movimiento</p>
+      <p id="motionValue" class="trend">Movimiento: 0.00</p>
+    </section>
+
+    <section class="card">
+      <p class="label">Último comando</p>
+      <p id="lastCommand">Ninguno</p>
+    </section>
+
+    <section class="card">
+      <p class="label">Respuesta del sistema</p>
+      <p id="systemMessage">Pulsa “Iniciar escucha” para comenzar.</p>
+    </section>
+
+    <section class="card">
+      <p class="label">Navegación</p>
+      <div class="button-grid">
+        <button class="small-button" id="mainScreenButton">Principal</button>
+        <button class="small-button" id="trendScreenButton">Tendencia</button>
+        <button class="small-button" id="lowScreenButton">Alerta baja</button>
+        <button class="small-button" id="highScreenButton">Alerta alta</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <p class="label">Escenarios</p>
+      <div class="button-grid">
+        <button class="small-button" id="stableScenarioButton">Estable</button>
+        <button class="small-button" id="downScenarioButton">Bajando</button>
+        <button class="small-button" id="upScenarioButton">Subiendo</button>
+        <button class="small-button" id="lowScenarioButton">Bajo</button>
+        <button class="small-button" id="highScenarioButton">Alto</button>
+      </div>
+    </section>
+
+    <button id="listenButton">Iniciar escucha</button>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="mobile.js"></script>
+</body>
+</html>

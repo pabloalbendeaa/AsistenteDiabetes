@@ -1,0 +1,14 @@
+{
+  "name": "siu-diabetes-prototype",
+  "version": "1.0.0",
+  "description": "Prototipo de asistencia glucémica distribuida para conducción",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  }
+}

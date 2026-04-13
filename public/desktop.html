@@ -41,47 +41,83 @@
       </article>
     </section>
 
-    <section class="desktop-content">
-      <section id="screen-main" class="screen active desktop-screen-card">
-        <h2>Pantalla principal</h2>
-        <p id="desktopMessage" class="desktop-message">Sistema iniciado.</p>
-
-        <div class="desktop-detail-grid">
-          <article class="detail-card">
-            <p class="label">Último comando</p>
-            <p id="desktopLastCommand" class="card-value">Ninguno</p>
-          </article>
-
-          <article class="detail-card">
-            <p class="label">Estado del sistema</p>
-            <p class="card-value">
-              El sistema muestra una visión general de glucosa, tendencia y contexto.
-            </p>
-          </article>
+    <section id="screen-main" class="screen active desktop-screen-card">
+      <div class="dashboard-hero">
+        <div class="dashboard-hero-left">
+          <p class="dashboard-kicker">Conducción asistida</p>
+          <h2>Estado general del conductor</h2>
+          <p id="desktopMessage" class="desktop-message">Sistema iniciado.</p>
         </div>
-      </section>
+
+        <div class="dashboard-hero-right">
+          <div class="hero-chip">
+            <span class="hero-chip-label">Último comando</span>
+            <span id="desktopLastCommand" class="hero-chip-value">Ninguno</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-cards">
+        <article class="detail-card highlighted-card">
+          <p class="label">Glucosa actual</p>
+          <p id="mainScreenGlucose" class="big-inline-metric">110 mg/dL</p>
+        </article>
+
+        <article class="detail-card">
+          <p class="label">Tendencia</p>
+          <p id="mainScreenTrend" class="card-value">Estable</p>
+        </article>
+
+        <article class="detail-card">
+          <p class="label">Estado</p>
+          <p id="mainScreenStatus" class="card-value">Seguro</p>
+        </article>
+      </div>
+    </section>
 
       <section id="screen-trend" class="screen desktop-screen-card">
-        <h2>Tendencia ampliada</h2>
-        <div class="trend-visual">
-          <div class="trend-line">
-            <span class="trend-dot"></span>
-            <span class="trend-dot"></span>
-            <span class="trend-dot active"></span>
-            <span class="trend-dot"></span>
-            <span class="trend-dot"></span>
+        <div class="trend-header">
+          <div>
+            <p class="dashboard-kicker">Evolución reciente</p>
+            <h2>Tendencia ampliada</h2>
           </div>
-          <div class="fake-chart big">
-            <div class="chart-bar small"></div>
-            <div class="chart-bar medium"></div>
-            <div class="chart-bar large"></div>
-            <div class="chart-bar medium"></div>
-            <div class="chart-bar small"></div>
+          <div class="trend-summary-box">
+            <span class="trend-summary-label">Lectura actual</span>
+            <span id="trendCurrentValue" class="trend-summary-value">110 mg/dL</span>
           </div>
         </div>
-        <p id="trendExplanation" class="desktop-message">
-          La evolución reciente de la glucosa se mostrará aquí.
-        </p>
+
+        <div class="trend-visual">
+          <div id="trendBars" class="trend-bars">
+            <div class="trend-bar" style="height: 44%"><span>96</span></div>
+            <div class="trend-bar" style="height: 52%"><span>102</span></div>
+            <div class="trend-bar" style="height: 60%"><span>108</span></div>
+            <div class="trend-bar" style="height: 67%"><span>114</span></div>
+            <div class="trend-bar active" style="height: 63%"><span>110</span></div>
+          </div>
+
+          <div class="trend-axis">
+            <span>-20 min</span>
+            <span>-15 min</span>
+            <span>-10 min</span>
+            <span>-5 min</span>
+            <span>Ahora</span>
+          </div>
+        </div>
+
+        <div class="trend-insights">
+          <article class="detail-card">
+            <p class="label">Lectura interpretada</p>
+            <p id="trendExplanation" class="desktop-message">
+              La evolución reciente de la glucosa se mostrará aquí.
+            </p>
+          </article>
+
+          <article class="detail-card">
+            <p class="label">Evaluación rápida</p>
+            <p id="trendRiskText" class="card-value">Sin riesgo inmediato.</p>
+          </article>
+        </div>
       </section>
 
       <section id="screen-low" class="screen desktop-screen-card alert-low">
@@ -98,12 +134,33 @@
         </p>
       </section>
 
-      <section id="screen-emergency" class="screen desktop-screen-card emergency">
-        <h2>🚨 Protocolo de emergencia</h2>
-        <p id="emergencyMessage" class="alert-text">
-          Emergencia simulada activada.
-        </p>
-        <p class="alert-subtext">Simulando aviso al 112 y comunicación de paciente diabético en riesgo.</p>
+      <section id="screen-emergency" class="screen emergency desktop-screen-card">
+
+        <div class="emergency-container">
+
+          <div class="emergency-header">
+            <h1 class="emergency-title">🚨 EMERGENCIA DETECTADA</h1>
+            <p class="emergency-subtitle">Situación crítica del conductor</p>
+          </div>
+
+          <div class="emergency-body">
+            <p id="emergencyMessage" class="emergency-message">
+              Activando protocolo de emergencia...
+            </p>
+
+            <div class="emergency-status">
+              <div class="emergency-step active">Detectando situación</div>
+              <div class="emergency-step">Avisando servicios de emergencia</div>
+              <div class="emergency-step">Compartiendo localización</div>
+            </div>
+          </div>
+
+          <div class="emergency-footer">
+            <p class="emergency-call">📞 Llamando al 112...</p>
+          </div>
+
+        </div>
+
       </section>
     </section>
   </main>

@@ -45,7 +45,7 @@ let stillCounter = 0;
 let impactCooldown = false;
 
 let gestureStream = null;
-let currentScreenOrder = ['main', 'trend', 'low', 'high'];
+const currentScreenOrder = ['main', 'trend', 'low', 'high'];
 
 let gestureModel = null;
 let maxPredictions = 0;
@@ -54,6 +54,10 @@ let lastDetectedGesture = 'ninguno';
 let lastGestureTimestamp = 0;
 let lastPredictedClass = 'ninguno';
 let stableGestureFrames = 0;
+
+let isSpeakingNow = false;
+let gestureLockUntil = 0;
+let emergencyTriggeredByClient = false;
 
 const GESTURE_MODEL_URL = 'https://teachablemachine.withgoogle.com/models/7QWKsqai1/';
 
@@ -88,10 +92,6 @@ function changeScreen(screen) {
 }
 
 function showFeedback(type, title, text) {
-  const feedbackBanner = document.getElementById('feedbackBanner');
-  const feedbackTitle = document.getElementById('feedbackTitle');
-  const feedbackText = document.getElementById('feedbackText');
-
   if (!feedbackBanner) return;
 
   feedbackBanner.className = `feedback-banner feedback-${type}`;
@@ -117,8 +117,25 @@ function getPreviousScreen(currentScreen) {
   ];
 }
 
-function handleGestureAction(action) {
+function speak(text) {
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'es-ES';
 
+  isSpeakingNow = true;
+
+  utterance.onend = () => {
+    isSpeakingNow = false;
+  };
+
+  utterance.onerror = () => {
+    isSpeakingNow = false;
+  };
+
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utterance);
+}
+
+function handleGestureAction(action) {
   if (action === 'siguiente') {
     const nextScreen = getNextScreen(lastState.screen || 'main');
     lastState.screen = nextScreen;
@@ -194,13 +211,6 @@ function handleGestureAction(action) {
   }
 }
 
-function speak(text) {
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = 'es-ES';
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(utterance);
-}
-
 function handleVoiceCommand(command) {
   const text = command.toLowerCase().trim();
 
@@ -211,8 +221,8 @@ function handleVoiceCommand(command) {
     text.includes('consulta glucosa') ||
     text === 'estado'
   ) {
-    const response = `Tu glucosa actual es ${lastState.glucose}. ${lastState.trend}.`;
-    patchState({ message: response });
+    const response = `Tu glucosa actual es ${glucoseValueEl.textContent}. Tendencia ${trendEl.textContent}.`;
+    patchState({ message: response, lastCommand: 'consulta glucosa' });
     showFeedback('success', 'Consulta por voz', response);
     speak(response);
     return;
@@ -220,7 +230,7 @@ function handleVoiceCommand(command) {
 
   if (text.includes('ver tendencia') || text.includes('tendencia')) {
     changeScreen('trend');
-    patchState({ message: 'Mostrando tendencia ampliada.' });
+    patchState({ message: 'Mostrando tendencia ampliada.', lastCommand: 'ver tendencia' });
     showFeedback('info', 'Navegación por voz', 'Mostrando tendencia ampliada.');
     speak('Mostrando tendencia');
     return;
@@ -228,8 +238,8 @@ function handleVoiceCommand(command) {
 
   if (text.includes('pantalla principal') || text.includes('principal')) {
     changeScreen('main');
-    patchState({ message: 'Mostrando pantalla principal.' });
-    showFeedback('info', 'Navegación por voz', 'Mostrando tendencia ampliada.');
+    patchState({ message: 'Mostrando pantalla principal.', lastCommand: 'pantalla principal' });
+    showFeedback('info', 'Navegación por voz', 'Mostrando pantalla principal.');
     speak('Pantalla principal');
     return;
   }
@@ -241,7 +251,8 @@ function handleVoiceCommand(command) {
       trend: 'Estable',
       status: 'Estado seguro',
       statusClass: 'safe',
-      message: 'Escenario estable activado.'
+      message: 'Escenario estable activado.',
+      lastCommand: 'escenario estable'
     });
     showFeedback('success', 'Escenario activado', 'Escenario estable activado.');
     speak('Escenario estable activado');
@@ -255,8 +266,10 @@ function handleVoiceCommand(command) {
       trend: 'Bajando',
       status: 'Precaución',
       statusClass: 'warning',
-      message: 'Escenario bajando activado.'
+      message: 'Escenario bajando activado.',
+      lastCommand: 'escenario bajando'
     });
+    showFeedback('warning', 'Escenario activado', 'Glucosa bajando simulada.');
     speak('Escenario bajando activado');
     return;
   }
@@ -268,8 +281,10 @@ function handleVoiceCommand(command) {
       trend: 'Subiendo',
       status: 'En ascenso',
       statusClass: 'warning',
-      message: 'Escenario subiendo activado.'
+      message: 'Escenario subiendo activado.',
+      lastCommand: 'escenario subiendo'
     });
+    showFeedback('warning', 'Escenario activado', 'Glucosa subiendo simulada.');
     speak('Escenario subiendo activado');
     return;
   }
@@ -281,7 +296,8 @@ function handleVoiceCommand(command) {
       trend: 'Bajando rápido',
       status: 'Glucosa baja',
       statusClass: 'danger',
-      message: 'Escenario de glucosa baja activado.'
+      message: 'Escenario de glucosa baja activado.',
+      lastCommand: 'escenario bajo'
     });
     changeScreen('low');
     showFeedback('danger', 'Escenario activado', 'Glucosa baja simulada.');
@@ -296,7 +312,8 @@ function handleVoiceCommand(command) {
       trend: 'Subiendo',
       status: 'Glucosa alta',
       statusClass: 'warning',
-      message: 'Escenario alto activado.'
+      message: 'Escenario alto activado.',
+      lastCommand: 'escenario alto'
     });
     changeScreen('high');
     showFeedback('warning', 'Escenario activado', 'Glucosa alta simulada.');
@@ -310,7 +327,6 @@ function handleVoiceCommand(command) {
     });
     showFeedback('danger', 'Emergencia', 'Activando protocolo de emergencia simulado.');
     speak('Activando protocolo de emergencia');
-    return;
   }
 }
 
@@ -363,6 +379,32 @@ function initSpeech() {
   return recognitionInstance;
 }
 
+function triggerEmergencyFromMotionAndGlucose(magnitude) {
+  if (emergencyTriggeredByClient) return;
+
+  const glucoseNumber = parseInt(glucoseValueEl.textContent, 10);
+  const strongImpact = magnitude > 12;
+  const lowGlucose = glucoseNumber <= 70;
+  const criticalGlucose = glucoseNumber <= 55;
+
+  if ((strongImpact && lowGlucose) || criticalGlucose) {
+    emergencyTriggeredByClient = true;
+
+    showFeedback(
+      'danger',
+      'Emergencia automática',
+      'Se ha detectado una situación de riesgo. Activando protocolo de emergencia.'
+    );
+
+    socket.emit('emergency:trigger', {
+      message: `Emergencia simulada activada automáticamente. Glucosa ${glucoseValueEl.textContent}, tendencia ${trendEl.textContent}, movimiento brusco detectado. Iniciando protocolo de aviso al 112.`
+    });
+
+    speak('Emergencia detectada. Contactando con servicios médicos.');
+    gestureLockUntil = Date.now() + 4000;
+  }
+}
+
 function handleMotionMagnitude(magnitude) {
   const MOTION_THRESHOLD = 1.8;
   const IMPACT_THRESHOLD = 12;
@@ -393,11 +435,7 @@ function handleMotionMagnitude(magnitude) {
   if (magnitude > IMPACT_THRESHOLD && !impactCooldown) {
     impactCooldown = true;
 
-    socket.emit('impact:detected', {
-      motionValue: magnitude
-    });
-
-    speak('Posible impacto detectado. Activando emergencia simulada.');
+    triggerEmergencyFromMotionAndGlucose(magnitude);
 
     setTimeout(() => {
       impactCooldown = false;
@@ -455,6 +493,27 @@ function initMotionDetection() {
 socket.on('state:update', (state) => {
   lastState = state;
   updateMobileUI(state);
+
+  if (!state.emergency) {
+    emergencyTriggeredByClient = false;
+  }
+
+  if (state.glucose <= 55 && !state.emergency && !emergencyTriggeredByClient) {
+    emergencyTriggeredByClient = true;
+
+    showFeedback(
+      'danger',
+      'Glucosa crítica',
+      'Nivel crítico detectado. Activando protocolo de emergencia.'
+    );
+
+    socket.emit('emergency:trigger', {
+      message: `Emergencia simulada activada automáticamente por glucosa crítica (${state.glucose} mg/dL). Iniciando protocolo de aviso al 112.`
+    });
+
+    speak('Glucosa crítica detectada. Activando protocolo de emergencia.');
+    gestureLockUntil = Date.now() + 4000;
+  }
 });
 
 mainScreenButton.addEventListener('click', () => changeScreen('main'));
@@ -469,8 +528,10 @@ stableScenarioButton.addEventListener('click', () => {
     trend: 'Estable',
     status: 'Estado seguro',
     statusClass: 'safe',
-    message: 'Escenario estable activado.'
+    message: 'Escenario estable activado.',
+    lastCommand: 'escenario estable'
   });
+  showFeedback('success', 'Escenario activado', 'Escenario estable activado.');
 });
 
 downScenarioButton.addEventListener('click', () => {
@@ -480,8 +541,10 @@ downScenarioButton.addEventListener('click', () => {
     trend: 'Bajando',
     status: 'Precaución',
     statusClass: 'warning',
-    message: 'Escenario bajando activado.'
+    message: 'Escenario bajando activado.',
+    lastCommand: 'escenario bajando'
   });
+  showFeedback('warning', 'Escenario activado', 'Glucosa bajando simulada.');
 });
 
 upScenarioButton.addEventListener('click', () => {
@@ -491,8 +554,10 @@ upScenarioButton.addEventListener('click', () => {
     trend: 'Subiendo',
     status: 'En ascenso',
     statusClass: 'warning',
-    message: 'Escenario subiendo activado.'
+    message: 'Escenario subiendo activado.',
+    lastCommand: 'escenario subiendo'
   });
+  showFeedback('warning', 'Escenario activado', 'Glucosa subiendo simulada.');
 });
 
 lowScenarioButton.addEventListener('click', () => {
@@ -502,9 +567,11 @@ lowScenarioButton.addEventListener('click', () => {
     trend: 'Bajando rápido',
     status: 'Glucosa baja',
     statusClass: 'danger',
-    message: 'Escenario de glucosa baja activado.'
+    message: 'Escenario de glucosa baja activado.',
+    lastCommand: 'escenario bajo'
   });
   changeScreen('low');
+  showFeedback('danger', 'Escenario activado', 'Glucosa baja simulada.');
 });
 
 highScenarioButton.addEventListener('click', () => {
@@ -514,9 +581,11 @@ highScenarioButton.addEventListener('click', () => {
     trend: 'Subiendo',
     status: 'Glucosa alta',
     statusClass: 'warning',
-    message: 'Escenario alto activado.'
+    message: 'Escenario alto activado.',
+    lastCommand: 'escenario alto'
   });
   changeScreen('high');
+  showFeedback('warning', 'Escenario activado', 'Glucosa alta simulada.');
 });
 
 listenButton.addEventListener('click', () => {
@@ -545,14 +614,18 @@ listenButton.addEventListener('click', () => {
 });
 
 emergencyButton.addEventListener('click', () => {
+  emergencyTriggeredByClient = true;
+
   socket.emit('emergency:trigger', {
     message: 'Emergencia simulada activada manualmente. Iniciando protocolo de aviso al 112.'
   });
+
   showFeedback(
-  'danger',
-  'Emergencia manual',
-  'Se ha activado el protocolo de emergencia simulado.'
-);
+    'danger',
+    'Emergencia manual',
+    'Se ha activado el protocolo de emergencia simulado.'
+  );
+
   speak('Activando protocolo de emergencia');
 });
 
@@ -582,6 +655,9 @@ async function startGestureCamera() {
     gestureLoopActive = true;
     lastDetectedGesture = 'ninguno';
     lastGestureTimestamp = 0;
+    lastPredictedClass = 'ninguno';
+    stableGestureFrames = 0;
+    gestureLockUntil = 0;
 
     gestureVideo.onloadedmetadata = () => {
       gestureLoop();
@@ -664,27 +740,44 @@ async function predictGestureFrame() {
   const action = mapGestureClassToAction(detectedClass);
   const now = Date.now();
 
-  // Umbral específico por gesto
   let confidenceThreshold = 0.88;
   if (detectedClass === 'palma') confidenceThreshold = 0.72;
   if (detectedClass === 'izquierda') confidenceThreshold = 0.78;
   if (detectedClass === 'derecha') confidenceThreshold = 0.88;
   if (detectedClass === 'puno' || detectedClass === 'puño') confidenceThreshold = 0.88;
 
-  const cooldownMs = 900;
+  if (detectedClass === lastPredictedClass) {
+    stableGestureFrames += 1;
+  } else {
+    lastPredictedClass = detectedClass;
+    stableGestureFrames = 1;
+  }
+
+  const gestureDelayMs = 1800;
 
   if (
     action &&
     probability >= confidenceThreshold &&
-    now - lastGestureTimestamp > cooldownMs
+    stableGestureFrames >= 2 &&
+    now > gestureLockUntil &&
+    !isSpeakingNow
   ) {
     lastGestureTimestamp = now;
+    gestureLockUntil = now + gestureDelayMs;
+    stableGestureFrames = 0;
+    lastPredictedClass = 'ninguno';
 
     if (action === 'consultar') {
       gestureStatus.textContent = 'consulta glucosa';
     }
 
     handleGestureAction(action);
+  }
+
+  if (detectedClass === 'ninguno' && probability >= 0.70) {
+    lastDetectedGesture = 'ninguno';
+    lastPredictedClass = 'ninguno';
+    stableGestureFrames = 0;
   }
 }
 

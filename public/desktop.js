@@ -39,6 +39,30 @@ const screenLabels = {
 };
 
 let trendHistory = [96, 102, 108, 114, 110];
+let lastSpokenMessageId = null;
+let isDesktopSpeaking = false;
+
+
+function speakDesktop(text) {
+  if (!text || isDesktopSpeaking) return;
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'es-ES';
+
+  isDesktopSpeaking = true;
+
+  utterance.onend = () => {
+    isDesktopSpeaking = false;
+  };
+
+  utterance.onerror = () => {
+    isDesktopSpeaking = false;
+  };
+
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utterance);
+}
+
 
 function animateScreenChange(activeScreen) {
   Object.values(screens).forEach((screen) => {
@@ -49,10 +73,12 @@ function animateScreenChange(activeScreen) {
   if (!activeScreen) return;
 
   activeScreen.classList.add('active');
+
   requestAnimationFrame(() => {
     activeScreen.classList.add('screen-enter');
   });
 }
+
 
 function updateTrendHistory(currentGlucose) {
   trendHistory.push(currentGlucose);
@@ -60,6 +86,7 @@ function updateTrendHistory(currentGlucose) {
     trendHistory.shift();
   }
 }
+
 
 function renderTrendBars() {
   if (!trendBars) return;
@@ -81,29 +108,16 @@ function renderTrendBars() {
     .join('');
 }
 
+
 function getTrendRiskText(state) {
-  if (state.emergency) {
-    return 'Emergencia activa. Prioridad máxima.';
-  }
-
-  if (state.glucose < 70) {
-    return 'Riesgo alto por glucosa baja.';
-  }
-
-  if (state.glucose > 180) {
-    return 'Riesgo moderado por glucosa alta.';
-  }
-
-  if (state.trend.toLowerCase().includes('bajando')) {
-    return 'Conviene vigilar posible descenso.';
-  }
-
-  if (state.trend.toLowerCase().includes('subiendo')) {
-    return 'Tendencia ascendente sin riesgo inmediato.';
-  }
-
+  if (state.emergency) return 'Emergencia activa. Prioridad máxima.';
+  if (state.glucose < 70) return 'Riesgo alto por glucosa baja.';
+  if (state.glucose > 180) return 'Riesgo moderado por glucosa alta.';
+  if (state.trend.toLowerCase().includes('bajando')) return 'Conviene vigilar posible descenso.';
+  if (state.trend.toLowerCase().includes('subiendo')) return 'Tendencia ascendente sin riesgo inmediato.';
   return 'Sin riesgo inmediato.';
 }
+
 
 function updateDesktopUI(state) {
   const activeScreen = screens[state.screen] || screens.main;
@@ -179,9 +193,29 @@ function updateDesktopUI(state) {
   }
 }
 
+
 socket.on('state:update', (state) => {
   updateDesktopUI(state);
+
+  const hasNewMessage =
+    state.message &&
+    state.messageId &&
+    state.messageId !== lastSpokenMessageId;
+
+  const isVoiceCritical =
+    state.lastCommand === 'consulta glucosa' ||
+    state.lastCommand === 'emergencia' ||
+    state.lastCommand === 'emergencia automática' ||
+    state.emergency === true;
+
+  const isNavigationCommand = state.lastCommand === 'navegar'; // 🔥 excluye navegación
+
+  if (hasNewMessage && isVoiceCritical && !isNavigationCommand) {
+    lastSpokenMessageId = state.messageId;
+    speakDesktop(state.message);
+  }
 });
+
 
 function startEmergencySequence() {
   if (emergencyInterval) return;
@@ -193,17 +227,23 @@ function startEmergencySequence() {
       emergencySteps.forEach((step, index) => {
         step.classList.toggle('active', index === emergencyStepIndex);
       });
-
-      emergencyStepIndex++;
+      emergencyStepIndex += 1;
     } else {
       clearInterval(emergencyInterval);
+      emergencyInterval = null;
     }
   }, 1500);
 }
 
+
 function resetEmergencySequence() {
   clearInterval(emergencyInterval);
   emergencyInterval = null;
-
-  emergencySteps.forEach(step => step.classList.remove('active'));
+  emergencyStepIndex = 0;
+  emergencySteps.forEach((step) => step.classList.remove('active'));
 }
+
+
+
+
+

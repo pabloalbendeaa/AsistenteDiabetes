@@ -129,9 +129,34 @@
     </div>
   </main>
 
+  <div id="emergencyOverlay" class="emergency-overlay-mobile" role="alertdialog" aria-modal="true" aria-labelledby="emergencyOverlayTitle">
+    <div class="emergency-overlay-inner">
+      <div class="emergency-overlay-header">
+        <h2 id="emergencyOverlayTitle">🚨 EMERGENCIA</h2>
+        <p class="emergency-overlay-subtitle">Situación crítica detectada</p>
+      </div>
+
+      <p id="emergencyOverlayMessage" class="emergency-overlay-message">
+        Activando protocolo de emergencia...
+      </p>
+
+      <div class="emergency-overlay-steps">
+        <div class="emergency-step-mobile active">Detectando situación</div>
+        <div class="emergency-step-mobile">Avisando al 112</div>
+        <div class="emergency-step-mobile">Compartiendo localización</div>
+      </div>
+
+      <p class="emergency-overlay-call">📞 Llamando al 112...</p>
+
+      <button id="emergencyClearButton" class="emergency-cancel-button">
+        Cancelar emergencia
+      </button>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
-  <script src="mobile.js"></script>
+  <script src="mobile.js?v=20260507c"></script>
 </body>
 </html>

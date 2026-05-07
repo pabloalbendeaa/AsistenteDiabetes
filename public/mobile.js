@@ -1,4 +1,16 @@
 // =========================
+// CONFIG
+// =========================
+// Pega aquí la URL de tu modelo Teachable Machine cuando lo entrenes.
+// Debe contener model.json + metadata.json. Clases esperadas:
+// "siguiente", "anterior", "consultar", "cancelar".
+const GESTURE_MODEL_URL = '/tm-model/';
+const GESTURE_CONFIDENCE = 0.85;
+
+// Umbral de impacto (m/s^2 normalizado restando gravedad). Ajustable.
+const IMPACT_THRESHOLD = 25;
+
+// =========================
 // SOCKET
 // =========================
 const socket = io();
@@ -40,21 +52,38 @@ const gesturePrevButton = document.getElementById('gesturePrevButton');
 const gestureConfirmButton = document.getElementById('gestureConfirmButton');
 const gestureCancelButton = document.getElementById('gestureCancelButton');
 
+// Emergencia (overlay móvil — añadido en mobile.html)
+const emergencyOverlay = document.getElementById('emergencyOverlay');
+const emergencyOverlayMessage = document.getElementById('emergencyOverlayMessage');
+const emergencyClearButton = document.getElementById('emergencyClearButton');
+const emergencySteps = document.querySelectorAll('.emergency-step-mobile');
+
 // =========================
 // ESTADO LOCAL
 // =========================
 let currentScreen = 'main';
+let currentEmergency = false;
 let recognition = null;
 let recognitionActive = false;
 let isSpeakingNow = false;
 let commandBlocked = false;
 let commandBlockTimer = null;
 
+// Conducción (DeviceMotion)
+let isDrivingDetected = false;
+let motionCounter = 0;
+let stillCounter = 0;
+let lastImpactSentAt = 0;
+
+// Emergencia
+let emergencyStepIndex = 0;
+let emergencyStepInterval = null;
+
 // =========================
 // UTILS
 // =========================
 function createMessageId() {
-  return `${Date.now()}-${Math.random()}`;
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function patchState(patch) {
@@ -67,7 +96,6 @@ function patchState(patch) {
 function changeScreen(screen) {
   currentScreen = screen;
   socket.emit('screen:change', screen);
-  patchState({ lastCommand: '' });
 }
 
 // =========================
@@ -97,11 +125,78 @@ function updateMobileUI(state) {
   motionValueEl.textContent = Number(state.motionValue || 0).toFixed(2);
   lastCommandEl.textContent = state.lastCommand || 'Ninguno';
   systemMessageEl.textContent = state.message || 'Sistema iniciado.';
-  screenNameEl.textContent = state.screen || 'Principal';
+  screenNameEl.textContent = labelFromScreen(state.screen);
+
+  currentScreen = state.screen || 'main';
+  applyEmergencyOverlay(state);
+}
+
+function labelFromScreen(screen) {
+  const labels = {
+    main: 'Principal',
+    trend: 'Tendencia',
+    low: 'Alerta baja',
+    high: 'Alerta alta',
+    emergency: 'Emergencia'
+  };
+  return labels[screen] || 'Principal';
 }
 
 // =========================
-// VOZ
+// EMERGENCIA UI MÓVIL
+// =========================
+function applyEmergencyOverlay(state) {
+  const isEmergency = !!state.emergency;
+
+  if (isEmergency && !currentEmergency) {
+    currentEmergency = true;
+    if (emergencyOverlay) {
+      emergencyOverlay.classList.add('active');
+      document.body.classList.add('mobile-emergency-mode');
+      if (emergencyOverlayMessage) {
+        emergencyOverlayMessage.textContent = state.message || 'Emergencia activada.';
+      }
+      startEmergencyStepsAnimation();
+    }
+  } else if (!isEmergency && currentEmergency) {
+    currentEmergency = false;
+    if (emergencyOverlay) {
+      emergencyOverlay.classList.remove('active');
+      document.body.classList.remove('mobile-emergency-mode');
+      stopEmergencyStepsAnimation();
+    }
+  } else if (isEmergency && emergencyOverlayMessage) {
+    emergencyOverlayMessage.textContent = state.message || 'Emergencia activada.';
+  }
+}
+
+function startEmergencyStepsAnimation() {
+  if (emergencyStepInterval || !emergencySteps.length) return;
+  emergencyStepIndex = 0;
+  emergencyStepInterval = setInterval(() => {
+    if (emergencyStepIndex < emergencySteps.length) {
+      emergencySteps.forEach((step, idx) => {
+        step.classList.toggle('active', idx === emergencyStepIndex);
+      });
+      emergencyStepIndex += 1;
+    } else {
+      clearInterval(emergencyStepInterval);
+      emergencyStepInterval = null;
+    }
+  }, 1500);
+}
+
+function stopEmergencyStepsAnimation() {
+  if (emergencyStepInterval) {
+    clearInterval(emergencyStepInterval);
+    emergencyStepInterval = null;
+  }
+  emergencyStepIndex = 0;
+  emergencySteps.forEach((step) => step.classList.remove('active'));
+}
+
+// =========================
+// VOZ (TTS)
 // =========================
 function speak(text) {
   const utterance = new SpeechSynthesisUtterance(text);
@@ -137,18 +232,17 @@ function speak(text) {
 }
 
 // =========================
-// EMERGENCIA
+// EMERGENCIA (acciones)
 // =========================
-function activateEmergency() {
-  const message = 'Emergencia activada. Llamando al 112. Compartiendo localización.';
-  patchState({
-    message,
-    lastCommand: 'emergencia',
-    emergency: true,
-    screen: 'emergency'
-  });
-  socket.emit('screen:change', 'emergency');
+function activateEmergency(message) {
+  const text = message || 'Emergencia activada. Llamando al 112. Compartiendo localización.';
+  socket.emit('emergency:trigger', { message: text });
   speak('Emergencia activada. Llamando al 112.');
+}
+
+function clearEmergency() {
+  socket.emit('emergency:clear');
+  speak('Emergencia cancelada.');
 }
 
 // =========================
@@ -156,7 +250,6 @@ function activateEmergency() {
 // =========================
 function setScenario(scenario) {
   socket.emit('scenario:change', scenario);
-  patchState({ lastCommand: '' });
 
   const names = {
     stable: 'Estable',
@@ -175,6 +268,7 @@ function handleVoiceCommand(command) {
   if (commandBlocked || isSpeakingNow) return;
 
   const text = command.toLowerCase();
+  socket.emit('command:recognized', text);
 
   // CONSULTA GLUCOSA
   if (text.includes('azúcar') || text.includes('glucosa') || text === 'estado') {
@@ -198,6 +292,12 @@ function handleVoiceCommand(command) {
     return;
   }
 
+  // CANCELAR EMERGENCIA
+  if (text.includes('cancelar emergencia') || text.includes('falsa alarma')) {
+    clearEmergency();
+    return;
+  }
+
   // EMERGENCIA
   if (text.includes('emergencia')) {
     activateEmergency();
@@ -210,19 +310,19 @@ function handleVoiceCommand(command) {
       setScenario('stable');
       return;
     }
-    if (text.includes('bajando') || text.includes('baja') || text.includes('bajo')) {
+    if (text.includes('bajando')) {
       setScenario('down');
       return;
     }
-    if (text.includes('subiendo') || text.includes('sube') || text.includes('alto')) {
+    if (text.includes('subiendo')) {
       setScenario('up');
       return;
     }
-    if (text.includes('hipoglucemia') || text.includes('muy bajo') || text.includes('crítico bajo')) {
+    if (text.includes('hipoglucemia') || text.includes('muy bajo') || text.includes('crítico bajo') || text.includes('bajo')) {
       setScenario('low');
       return;
     }
-    if (text.includes('hiperglucemia') || text.includes('muy alto') || text.includes('crítico alto')) {
+    if (text.includes('hiperglucemia') || text.includes('muy alto') || text.includes('crítico alto') || text.includes('alto')) {
       setScenario('high');
       return;
     }
@@ -245,25 +345,19 @@ function handleVoiceCommand(command) {
 // GESTOS
 // =========================
 function handleGestureAction(action) {
-  if (action === 'siguiente') {
-    const order = ['main', 'trend', 'low', 'high'];
-    const index = order.indexOf(currentScreen);
-    const next = order[(index + 1) % order.length];
-    changeScreen(next);
-    speak(`Mostrando ${next}`);
+  if (action === 'siguiente' && currentScreen === 'main') {
+    changeScreen('trend');
+    speak('Mostrando tendencia');
     return;
   }
 
-  if (action === 'anterior') {
-    const order = ['main', 'trend', 'low', 'high'];
-    const index = order.indexOf(currentScreen);
-    const prev = order[(index - 1 + order.length) % order.length];
-    changeScreen(prev);
-    speak(`Mostrando ${prev}`);
+  if (action === 'anterior' && currentScreen === 'trend') {
+    changeScreen('main');
+    speak('Pantalla principal');
     return;
   }
 
-  if (action === 'consultar') {
+  if (action === 'consultar' || action === 'consulta glucosa') {
     const response = `Tu glucosa actual es ${glucoseValueEl.textContent}. Tendencia ${trendEl.textContent}.`;
     patchState({ message: response, lastCommand: 'consulta glucosa' });
     speak(response);
@@ -271,8 +365,12 @@ function handleGestureAction(action) {
   }
 
   if (action === 'cancelar') {
-    changeScreen('main');
-    speak('Cancelado');
+    if (currentEmergency) {
+      clearEmergency();
+    } else {
+      changeScreen('main');
+      speak('Cancelado');
+    }
   }
 }
 
@@ -282,18 +380,30 @@ function handleGestureAction(action) {
 let gestureModel = null;
 let gestureCameraActive = false;
 let gestureLoopId = null;
+let lastGestureSentAt = 0;
+const GESTURE_COOLDOWN_MS = 2000;
 
 async function startGestureCamera() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
     gestureVideo.srcObject = stream;
     gestureCameraActive = true;
+    gestureStatus.textContent = 'Cámara activada';
 
-    // Si tienes modelo Teachable Machine, cárgalo aquí:
-    // const modelURL = 'URL_DE_TU_MODELO/model.json';
-    // const metadataURL = 'URL_DE_TU_MODELO/metadata.json';
-    // gestureModel = await tmImage.load(modelURL, metadataURL);
-    // gestureLoop();
+    if (GESTURE_MODEL_URL && typeof tmImage !== 'undefined') {
+      try {
+        const modelURL = `${GESTURE_MODEL_URL.replace(/\/$/, '')}/model.json`;
+        const metadataURL = `${GESTURE_MODEL_URL.replace(/\/$/, '')}/metadata.json`;
+        gestureModel = await tmImage.load(modelURL, metadataURL);
+        gestureStatus.textContent = 'Modelo cargado. Detectando...';
+        gestureLoop();
+      } catch (modelErr) {
+        console.error('Error cargando modelo TM:', modelErr);
+        gestureStatus.textContent = 'Modelo no disponible (modo simulación)';
+      }
+    } else {
+      gestureStatus.textContent = 'Cámara activa (sin modelo, usa simulación)';
+    }
   } catch (e) {
     console.error('Error accediendo a la cámara:', e);
     gestureStatus.textContent = 'Error: sin acceso a cámara';
@@ -302,7 +412,7 @@ async function startGestureCamera() {
 
 function stopGestureCamera() {
   if (gestureVideo.srcObject) {
-    gestureVideo.srcObject.getTracks().forEach(t => t.stop());
+    gestureVideo.srcObject.getTracks().forEach((t) => t.stop());
     gestureVideo.srcObject = null;
   }
   gestureCameraActive = false;
@@ -316,12 +426,27 @@ function stopGestureCamera() {
 async function gestureLoop() {
   if (!gestureCameraActive || !gestureModel) return;
 
-  const prediction = await gestureModel.predict(gestureVideo);
-  const top = prediction.reduce((a, b) => a.probability > b.probability ? a : b);
+  try {
+    const prediction = await gestureModel.predict(gestureVideo);
+    const top = prediction.reduce((a, b) => (a.probability > b.probability ? a : b));
 
-  if (top.probability > 0.85) {
-    gestureStatus.textContent = top.className;
-    handleGestureAction(top.className.toLowerCase());
+    const detected = top.className.toLowerCase().trim();
+    const pct = Math.round(top.probability * 100);
+    const label = detected === 'nada' ? 'Sin gesto' : top.className;
+    gestureStatus.textContent = `${label} (${pct}%)`;
+
+    if (top.probability >= GESTURE_CONFIDENCE && detected !== 'nada') {
+      const now = Date.now();
+      if (now - lastGestureSentAt > GESTURE_COOLDOWN_MS) {
+        lastGestureSentAt = now;
+        gestureStatus.textContent = `✓ ${top.className} (${pct}%)`;
+        gestureStatus.classList.add('gesture-triggered');
+        setTimeout(() => gestureStatus.classList.remove('gesture-triggered'), 800);
+        handleGestureAction(detected);
+      }
+    }
+  } catch (err) {
+    console.error('Error en gestureLoop:', err);
   }
 
   gestureLoopId = requestAnimationFrame(gestureLoop);
@@ -342,8 +467,11 @@ function initSpeech() {
 
   rec.onresult = (event) => {
     if (commandBlocked || isSpeakingNow) return;
-    const transcript = event.results[event.results.length - 1][0].transcript;
-    handleVoiceCommand(transcript);
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const result = event.results[i];
+      if (!result.isFinal) continue;
+      handleVoiceCommand(result[0].transcript);
+    }
   };
 
   rec.onend = () => {
@@ -354,7 +482,102 @@ function initSpeech() {
     }
   };
 
+  rec.onerror = (event) => {
+    if (event.error === 'not-allowed') {
+      recognitionActive = false;
+      listenButton.textContent = '🎤 Activar voz';
+      systemMessageEl.textContent = 'Permiso de micrófono denegado.';
+    }
+  };
+
   return rec;
+}
+
+// =========================
+// DEVICE MOTION (conducción + impacto)
+// =========================
+function handleMotionMagnitude(magnitude) {
+  const MOTION_THRESHOLD = 1.8;
+
+  if (magnitude > MOTION_THRESHOLD) {
+    motionCounter += 1;
+    stillCounter = 0;
+  } else {
+    stillCounter += 1;
+    if (motionCounter > 0) motionCounter -= 1;
+  }
+
+  let drivingChanged = false;
+  if (motionCounter >= 4 && !isDrivingDetected) {
+    isDrivingDetected = true;
+    drivingChanged = true;
+  }
+  if (stillCounter >= 8 && isDrivingDetected) {
+    isDrivingDetected = false;
+    drivingChanged = true;
+  }
+
+  if (drivingChanged) {
+    socket.emit('driving:update', {
+      driving: isDrivingDetected,
+      motionValue: magnitude
+    });
+  }
+
+  // Impacto: dispara emergencia automática (con cooldown 10s)
+  if (magnitude >= IMPACT_THRESHOLD) {
+    const now = Date.now();
+    if (now - lastImpactSentAt > 10000) {
+      lastImpactSentAt = now;
+      socket.emit('impact:detected', { motionValue: magnitude });
+    }
+  }
+}
+
+function initMotionDetection() {
+  if (!window.DeviceMotionEvent) {
+    drivingStatusEl.textContent = 'Sensores no disponibles';
+    return;
+  }
+
+  const startListeningToMotion = () => {
+    window.addEventListener('devicemotion', (event) => {
+      const acc = event.accelerationIncludingGravity;
+      if (!acc) return;
+
+      const x = acc.x || 0;
+      const y = acc.y || 0;
+      const z = acc.z || 0;
+
+      const magnitude = Math.sqrt(x * x + y * y + z * z);
+      const normalizedMovement = Math.abs(magnitude - 9.8);
+
+      handleMotionMagnitude(normalizedMovement);
+    });
+  };
+
+  if (typeof DeviceMotionEvent.requestPermission === 'function') {
+    // iOS 13+ exige interacción para pedir permiso
+    const enableMotionOnce = async () => {
+      try {
+        const permission = await DeviceMotionEvent.requestPermission();
+        if (permission === 'granted') {
+          startListeningToMotion();
+        } else {
+          drivingStatusEl.textContent = 'Permiso de movimiento denegado';
+        }
+      } catch (error) {
+        drivingStatusEl.textContent = 'Sensor de movimiento no disponible';
+      }
+      document.removeEventListener('click', enableMotionOnce);
+      document.removeEventListener('touchstart', enableMotionOnce);
+    };
+
+    document.addEventListener('click', enableMotionOnce, { once: true });
+    document.addEventListener('touchstart', enableMotionOnce, { once: true });
+  } else {
+    startListeningToMotion();
+  }
 }
 
 // =========================
@@ -401,6 +624,10 @@ highScenarioButton.addEventListener('click', () => setScenario('high'));
 // =========================
 emergencyButton.addEventListener('click', () => activateEmergency());
 
+if (emergencyClearButton) {
+  emergencyClearButton.addEventListener('click', () => clearEmergency());
+}
+
 // =========================
 // BOTONES GESTOS
 // =========================
@@ -416,16 +643,23 @@ gestureCancelButton.addEventListener('click', () => handleGestureAction('cancela
 // =========================
 listenButton.addEventListener('click', () => {
   if (!recognition) recognition = initSpeech();
-  if (!recognition) return;
+  if (!recognition) {
+    systemMessageEl.textContent = 'Reconocimiento de voz no soportado en este navegador.';
+    return;
+  }
 
   if (!recognitionActive) {
-    recognition.start();
+    try { recognition.start(); } catch (e) {}
     recognitionActive = true;
     listenButton.textContent = '🔴 Escuchando...';
   } else {
-    recognition.stop();
+    try { recognition.stop(); } catch (e) {}
     recognitionActive = false;
     listenButton.textContent = '🎤 Activar voz';
   }
 });
 
+// =========================
+// INIT
+// =========================
+initMotionDetection();

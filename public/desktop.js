@@ -41,6 +41,8 @@ const screenLabels = {
 let trendHistory = [96, 102, 108, 114, 110];
 let lastSpokenMessageId = null;
 let isDesktopSpeaking = false;
+let currentDesktopScreen = null;
+let lastTrendGlucose = null;
 
 
 function speakDesktop(text) {
@@ -113,15 +115,19 @@ function getTrendRiskText(state) {
   if (state.emergency) return 'Emergencia activa. Prioridad máxima.';
   if (state.glucose < 70) return 'Riesgo alto por glucosa baja.';
   if (state.glucose > 180) return 'Riesgo moderado por glucosa alta.';
-  if (state.trend.toLowerCase().includes('bajando')) return 'Conviene vigilar posible descenso.';
-  if (state.trend.toLowerCase().includes('subiendo')) return 'Tendencia ascendente sin riesgo inmediato.';
+  const trend = (state.trend || '').toLowerCase();
+  if (trend.includes('bajando')) return 'Conviene vigilar posible descenso.';
+  if (trend.includes('subiendo')) return 'Tendencia ascendente sin riesgo inmediato.';
   return 'Sin riesgo inmediato.';
 }
 
 
 function updateDesktopUI(state) {
   const activeScreen = screens[state.screen] || screens.main;
-  animateScreenChange(activeScreen);
+  if (state.screen !== currentDesktopScreen) {
+    currentDesktopScreen = state.screen;
+    animateScreenChange(activeScreen);
+  }
 
   desktopScreenLabel.textContent = `Pantalla: ${screenLabels[state.screen] || 'Principal'}`;
   desktopGlucoseValue.textContent = `${state.glucose} mg/dL`;
@@ -155,16 +161,20 @@ function updateDesktopUI(state) {
     mainScreenStatus.textContent = state.status;
   }
 
-  updateTrendHistory(state.glucose);
-  renderTrendBars();
+  if (state.glucose !== lastTrendGlucose) {
+    lastTrendGlucose = state.glucose;
+    updateTrendHistory(state.glucose);
+    renderTrendBars();
+  }
 
   if (trendCurrentValue) {
     trendCurrentValue.textContent = `${state.glucose} mg/dL`;
   }
 
   if (trendExplanation) {
+    const trendLower = (state.trend || '').toLowerCase();
     trendExplanation.textContent =
-      `La glucosa actual se sitúa en ${state.glucose} mg/dL, con una tendencia ${state.trend.toLowerCase()} y un estado general "${state.status}".`;
+      `La glucosa actual se sitúa en ${state.glucose} mg/dL, con una tendencia ${trendLower} y un estado general "${state.status}".`;
   }
 
   if (trendRiskText) {
